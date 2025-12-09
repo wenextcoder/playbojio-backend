@@ -197,16 +197,6 @@ ModelManifest.xml
 .idea/
 *.sln.iml
 
-# Environment variables
-.env
-.env.local
-.env.production
-
-# Sensitive configuration files
-appsettings.json
-appsettings.Development.json
-appsettings.Production.json
-**/appsettings.*.json
 
 # Keep example config
 !appsettings.Example.json
