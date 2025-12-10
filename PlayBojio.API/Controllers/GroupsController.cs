@@ -241,6 +241,7 @@ public class GroupsController : ControllerBase
                 s.Location,
                 s.Attendees.Count,
                 s.MaxPlayers,
+                s.MaxPlayers - (s.Attendees.Count + s.ReservedSlots + (s.IsHostParticipating ? 1 : 0)),
                 s.Host.DisplayName,
                 s.IsNewbieFriendly,
                 s.CostPerPerson,

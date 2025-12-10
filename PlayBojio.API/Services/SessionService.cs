@@ -75,6 +75,8 @@ public class SessionService : ISessionService
             AdditionalGames = request.AdditionalGames,
             MinPlayers = request.MinPlayers,
             MaxPlayers = request.MaxPlayers,
+            ReservedSlots = request.ReservedSlots,
+            IsHostParticipating = request.IsHostParticipating,
             GameTags = request.GameTags,
             IsNewbieFriendly = request.IsNewbieFriendly,
             Language = request.Language,
@@ -158,6 +160,8 @@ public class SessionService : ISessionService
         session.AdditionalGames = request.AdditionalGames;
         session.MinPlayers = request.MinPlayers;
         session.MaxPlayers = request.MaxPlayers;
+        session.ReservedSlots = request.ReservedSlots;
+        session.IsHostParticipating = request.IsHostParticipating;
         session.GameTags = request.GameTags;
         session.IsNewbieFriendly = request.IsNewbieFriendly;
         session.Language = request.Language;
@@ -241,6 +245,8 @@ public class SessionService : ISessionService
         var isUserAttending = userId != null && session.Attendees.Any(a => a.UserId == userId);
         var isUserOnWaitlist = userId != null && session.Waitlist.Any(w => w.UserId == userId);
         var isUserHost = userId == session.HostId;
+        var hostCount = session.IsHostParticipating ? 1 : 0;
+        var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount);
 
         return new SessionResponse(
             session.Id,
@@ -260,6 +266,9 @@ public class SessionService : ISessionService
             session.AdditionalGames,
             session.MinPlayers,
             session.MaxPlayers,
+            session.ReservedSlots,
+            session.IsHostParticipating,
+            availableSlots,
             session.GameTags,
             session.IsNewbieFriendly,
             session.Language,
@@ -298,6 +307,8 @@ public class SessionService : ISessionService
         var isUserAttending = userId != null && session.Attendees.Any(a => a.UserId == userId);
         var isUserOnWaitlist = userId != null && session.Waitlist.Any(w => w.UserId == userId);
         var isUserHost = userId == session.HostId;
+        var hostCount = session.IsHostParticipating ? 1 : 0;
+        var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount);
 
         return new SessionResponse(
             session.Id,
@@ -317,6 +328,9 @@ public class SessionService : ISessionService
             session.AdditionalGames,
             session.MinPlayers,
             session.MaxPlayers,
+            session.ReservedSlots,
+            session.IsHostParticipating,
+            availableSlots,
             session.GameTags,
             session.IsNewbieFriendly,
             session.Language,
@@ -364,7 +378,7 @@ public class SessionService : ISessionService
             query = query.Where(s => 
                 s.Title.Contains(searchText) || 
                 s.PrimaryGame.Contains(searchText) ||
-                (s.Description != null && s.Description.Contains(searchText)) ||
+                (s.AdditionalNotes != null && s.AdditionalNotes.Contains(searchText)) ||
                 s.Location.Contains(searchText) ||
                 (s.GameTags != null && s.GameTags.Contains(searchText)));
         }
@@ -445,23 +459,28 @@ public class SessionService : ISessionService
             .Take(pageSize)
             .ToList();
 
-        var items = paginatedSessions.Select(s => new SessionListResponse(
-            s.Id,
-            s.Title,
-            s.Slug,
-            s.ImageUrl,
-            s.PrimaryGame,
-            s.StartTime,
-            s.Location,
-            s.Attendees.Count,
-            s.MaxPlayers,
-            s.Host.DisplayName,
-            s.IsNewbieFriendly,
-            s.CostPerPerson,
-            s.SessionType,
-            s.EventId,
-            s.Event?.Name
-        )).ToList();
+        var items = paginatedSessions.Select(s => {
+            var hostCount = s.IsHostParticipating ? 1 : 0;
+            var availableSlots = s.MaxPlayers - (s.Attendees.Count + s.ReservedSlots + hostCount);
+            return new SessionListResponse(
+                s.Id,
+                s.Title,
+                s.Slug,
+                s.ImageUrl,
+                s.PrimaryGame,
+                s.StartTime,
+                s.Location,
+                s.Attendees.Count,
+                s.MaxPlayers,
+                availableSlots,
+                s.Host.DisplayName,
+                s.IsNewbieFriendly,
+                s.CostPerPerson,
+                s.SessionType,
+                s.EventId,
+                s.Event?.Name
+            );
+        }).ToList();
 
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
@@ -649,23 +668,28 @@ public class SessionService : ISessionService
             .OrderByDescending(s => s.StartTime)
             .ToListAsync();
 
-        return sessions.Select(s => new SessionListResponse(
-            s.Id,
-            s.Title,
-            s.Slug,
-            s.ImageUrl,
-            s.PrimaryGame,
-            s.StartTime,
-            s.Location,
-            s.Attendees.Count,
-            s.MaxPlayers,
-            s.Host.DisplayName,
-            s.IsNewbieFriendly,
-            s.CostPerPerson,
-            s.SessionType,
-            s.EventId,
-            s.Event?.Name
-        )).ToList();
+        return sessions.Select(s => {
+            var hostCount = s.IsHostParticipating ? 1 : 0;
+            var availableSlots = s.MaxPlayers - (s.Attendees.Count + s.ReservedSlots + hostCount);
+            return new SessionListResponse(
+                s.Id,
+                s.Title,
+                s.Slug,
+                s.ImageUrl,
+                s.PrimaryGame,
+                s.StartTime,
+                s.Location,
+                s.Attendees.Count,
+                s.MaxPlayers,
+                availableSlots,
+                s.Host.DisplayName,
+                s.IsNewbieFriendly,
+                s.CostPerPerson,
+                s.SessionType,
+                s.EventId,
+                s.Event?.Name
+            );
+        }).ToList();
     }
 
     public async Task<List<SessionListResponse>> GetEventSessionsAsync(int eventId, string? userId)
@@ -726,23 +750,28 @@ public class SessionService : ISessionService
             }).ToList();
         }
 
-        return sessions.Select(s => new SessionListResponse(
-            s.Id,
-            s.Title,
-            s.Slug,
-            s.ImageUrl,
-            s.PrimaryGame,
-            s.StartTime,
-            s.Location,
-            s.Attendees.Count,
-            s.MaxPlayers,
-            s.Host.DisplayName,
-            s.IsNewbieFriendly,
-            s.CostPerPerson,
-            s.SessionType,
-            s.EventId,
-            s.Event?.Name
-        )).ToList();
+        return sessions.Select(s => {
+            var hostCount = s.IsHostParticipating ? 1 : 0;
+            var availableSlots = s.MaxPlayers - (s.Attendees.Count + s.ReservedSlots + hostCount);
+            return new SessionListResponse(
+                s.Id,
+                s.Title,
+                s.Slug,
+                s.ImageUrl,
+                s.PrimaryGame,
+                s.StartTime,
+                s.Location,
+                s.Attendees.Count,
+                s.MaxPlayers,
+                availableSlots,
+                s.Host.DisplayName,
+                s.IsNewbieFriendly,
+                s.CostPerPerson,
+                s.SessionType,
+                s.EventId,
+                s.Event?.Name
+            );
+        }).ToList();
     }
 }
 

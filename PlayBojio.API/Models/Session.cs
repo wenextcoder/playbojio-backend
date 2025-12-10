@@ -19,6 +19,8 @@ public class Session
     public string? AdditionalGames { get; set; }
     public int MinPlayers { get; set; }
     public int MaxPlayers { get; set; }
+    public int ReservedSlots { get; set; } = 0;
+    public bool IsHostParticipating { get; set; } = false;
     public string? GameTags { get; set; }
     public bool IsNewbieFriendly { get; set; }
     public string Language { get; set; } = "English";
