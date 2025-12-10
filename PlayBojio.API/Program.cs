@@ -13,16 +13,38 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Database - Support both SQL Server and PostgreSQL
 var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "SqlServer";
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Convert PostgreSQL URI format to Npgsql format if needed
+if (databaseProvider == "PostgreSQL" && connectionString != null && connectionString.StartsWith("postgresql://"))
+{
+    try
+    {
+        var uri = new Uri(connectionString);
+        var userInfo = uri.UserInfo.Split(':');
+        var username = userInfo[0];
+        var password = userInfo.Length > 1 ? userInfo[1] : "";
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.AbsolutePath.TrimStart('/');
+        
+        connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+    }
+    catch
+    {
+        // If URI parsing fails, use original connection string
+    }
+}
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     if (databaseProvider == "PostgreSQL")
     {
-        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+        options.UseNpgsql(connectionString);
     }
     else
     {
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+        options.UseSqlServer(connectionString);
     }
 });
 
