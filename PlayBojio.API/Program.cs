@@ -11,9 +11,20 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database
+// Database - Support both SQL Server and PostgreSQL
+var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "SqlServer";
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (databaseProvider == "PostgreSQL")
+    {
+        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    }
+    else
+    {
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    }
+});
 
 // Identity
 builder.Services.AddIdentity<User, IdentityRole>(options =>

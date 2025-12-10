@@ -1,0 +1,12 @@
+**/.dockerignore
+**/.git
+**/.gitignore
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/*.user
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Production.json
+
