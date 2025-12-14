@@ -342,6 +342,13 @@ public class EventService : IEventService
         if (!await CanUserViewEvent(evt, userId))
             return false;
 
+        // Check if user is blacklisted from this event
+        var isBlacklisted = await _context.EventBlacklists
+            .AnyAsync(eb => eb.EventId == eventId && eb.BlacklistedUserId == userId);
+
+        if (isBlacklisted)
+            return false;
+
         if (evt.MaxParticipants.HasValue && evt.Attendees.Count >= evt.MaxParticipants.Value)
             return false;
 

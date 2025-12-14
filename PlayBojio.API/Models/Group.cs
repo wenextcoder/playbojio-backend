@@ -16,6 +16,7 @@ public class Group
     public ICollection<GroupMember> Members { get; set; } = new List<GroupMember>();
     public ICollection<EventGroup> EventGroups { get; set; } = new List<EventGroup>();
     public ICollection<SessionGroup> SessionGroups { get; set; } = new List<SessionGroup>();
+    public ICollection<GroupBlacklist> BlacklistedUsers { get; set; } = new List<GroupBlacklist>();
 }
 
 public enum GroupVisibility

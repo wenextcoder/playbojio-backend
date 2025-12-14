@@ -277,5 +277,127 @@ public class GroupsController : ControllerBase
 
         return Ok(groupIds);
     }
+
+    // Group Blacklist Management
+    [HttpGet("{id}/blacklist")]
+    public async Task<IActionResult> GetGroupBlacklist(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        // Check if user is group owner or admin
+        var group = await _context.Groups.FindAsync(id);
+        if (group == null)
+            return NotFound();
+
+        var isAdmin = await _context.GroupMembers
+            .AnyAsync(gm => gm.GroupId == id && gm.UserId == userId && gm.IsAdmin);
+
+        if (group.OwnerId != userId && !isAdmin)
+            return Forbid();
+
+        var blacklistedUsers = await _context.GroupBlacklists
+            .Where(gb => gb.GroupId == id)
+            .Include(gb => gb.BlacklistedUser)
+            .Include(gb => gb.BlacklistedByUser)
+            .Select(gb => new
+            {
+                gb.Id,
+                UserId = gb.BlacklistedUser.Id,
+                gb.BlacklistedUser.DisplayName,
+                gb.BlacklistedUser.AvatarUrl,
+                gb.BlacklistedUser.Email,
+                BlacklistedBy = gb.BlacklistedByUser.DisplayName,
+                gb.CreatedAt,
+                gb.Reason
+            })
+            .ToListAsync();
+
+        return Ok(blacklistedUsers);
+    }
+
+    [HttpPost("{id}/blacklist/{blacklistedUserId}")]
+    public async Task<IActionResult> AddToGroupBlacklist(int id, string blacklistedUserId, [FromBody] string? reason = null)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var group = await _context.Groups.FindAsync(id);
+        if (group == null)
+            return NotFound();
+
+        // Check if user is group owner or admin
+        var isAdmin = await _context.GroupMembers
+            .AnyAsync(gm => gm.GroupId == id && gm.UserId == userId && gm.IsAdmin);
+
+        if (group.OwnerId != userId && !isAdmin)
+            return Forbid();
+
+        // Cannot blacklist the owner
+        if (blacklistedUserId == group.OwnerId)
+            return BadRequest(new { message = "Cannot blacklist the group owner" });
+
+        // Check if already blacklisted
+        var exists = await _context.GroupBlacklists
+            .AnyAsync(gb => gb.GroupId == id && gb.BlacklistedUserId == blacklistedUserId);
+
+        if (exists)
+            return BadRequest(new { message = "User already blacklisted from this group" });
+
+        // Add to blacklist
+        _context.GroupBlacklists.Add(new Models.GroupBlacklist
+        {
+            GroupId = id,
+            BlacklistedUserId = blacklistedUserId,
+            BlacklistedByUserId = userId,
+            Reason = reason
+        });
+
+        // Remove from group if they are a member
+        var membership = await _context.GroupMembers
+            .FirstOrDefaultAsync(gm => gm.GroupId == id && gm.UserId == blacklistedUserId);
+        
+        if (membership != null)
+        {
+            _context.GroupMembers.Remove(membership);
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "User blacklisted from group successfully" });
+    }
+
+    [HttpDelete("{id}/blacklist/{blacklistedUserId}")]
+    public async Task<IActionResult> RemoveFromGroupBlacklist(int id, string blacklistedUserId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var group = await _context.Groups.FindAsync(id);
+        if (group == null)
+            return NotFound();
+
+        // Check if user is group owner or admin
+        var isAdmin = await _context.GroupMembers
+            .AnyAsync(gm => gm.GroupId == id && gm.UserId == userId && gm.IsAdmin);
+
+        if (group.OwnerId != userId && !isAdmin)
+            return Forbid();
+
+        var blacklist = await _context.GroupBlacklists
+            .FirstOrDefaultAsync(gb => gb.GroupId == id && gb.BlacklistedUserId == blacklistedUserId);
+
+        if (blacklist == null)
+            return NotFound();
+
+        _context.GroupBlacklists.Remove(blacklist);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
 }
+
+
 

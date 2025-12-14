@@ -25,6 +25,7 @@ public class Event
     public ICollection<Session> Sessions { get; set; } = new List<Session>();
     public ICollection<EventAttendee> Attendees { get; set; } = new List<EventAttendee>();
     public ICollection<EventGroup> EventGroups { get; set; } = new List<EventGroup>();
+    public ICollection<EventBlacklist> BlacklistedUsers { get; set; } = new List<EventBlacklist>();
 }
 
 public enum EventVisibility

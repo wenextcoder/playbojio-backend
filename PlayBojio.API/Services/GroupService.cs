@@ -192,6 +192,13 @@ public class GroupService : IGroupService
         if (group.Members.Any(m => m.UserId == userId))
             return false;
 
+        // Check if user is blacklisted from this group
+        var isBlacklisted = await _context.GroupBlacklists
+            .AnyAsync(gb => gb.GroupId == groupId && gb.BlacklistedUserId == userId);
+
+        if (isBlacklisted)
+            return false;
+
         _context.GroupMembers.Add(new GroupMember
         {
             GroupId = groupId,

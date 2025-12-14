@@ -76,6 +76,128 @@ public class AdminController : ControllerBase
         return Ok(users);
     }
 
+    [HttpGet("users/{userId}")]
+    public async Task<IActionResult> GetUserDetails(string userId)
+    {
+        var user = await _context.Users
+            .Include(u => u.CreatedSessions)
+            .Include(u => u.CreatedEvents)
+            .Include(u => u.OwnedGroups)
+            .Include(u => u.GroupMemberships)
+                .ThenInclude(gm => gm.Group)
+            .Include(u => u.SessionAttendances)
+                .ThenInclude(sa => sa.Session)
+            .Include(u => u.EventAttendances)
+                .ThenInclude(ea => ea.Event)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+            return NotFound(new { message = "User not found" });
+
+        var createdSessions = user.CreatedSessions
+            .OrderByDescending(s => s.CreatedAt)
+            .Select(s => new
+            {
+                s.Id,
+                s.Title,
+                s.Slug,
+                s.PrimaryGame,
+                s.StartTime,
+                s.Location,
+                s.IsCancelled
+            })
+            .ToList();
+
+        var createdEvents = user.CreatedEvents
+            .OrderByDescending(e => e.CreatedAt)
+            .Select(e => new
+            {
+                e.Id,
+                e.Name,
+                e.Slug,
+                e.StartDate,
+                e.Location,
+                e.IsCancelled
+            })
+            .ToList();
+
+        var ownedGroups = user.OwnedGroups
+            .OrderByDescending(g => g.CreatedAt)
+            .Select(g => new
+            {
+                g.Id,
+                g.Name,
+                g.Visibility,
+                MembersCount = g.Members.Count
+            })
+            .ToList();
+
+        var joinedGroups = user.GroupMemberships
+            .Where(gm => gm.Group.OwnerId != userId)
+            .Select(gm => new
+            {
+                gm.Group.Id,
+                gm.Group.Name,
+                gm.Group.Visibility,
+                MembersCount = gm.Group.Members.Count,
+                gm.JoinedAt
+            })
+            .OrderByDescending(g => g.JoinedAt)
+            .ToList();
+
+        var attendedSessions = user.SessionAttendances
+            .Where(sa => sa.Session.HostId != userId)
+            .OrderByDescending(sa => sa.JoinedAt)
+            .Select(sa => new
+            {
+                sa.Session.Id,
+                sa.Session.Title,
+                sa.Session.Slug,
+                sa.Session.PrimaryGame,
+                sa.Session.StartTime,
+                sa.Session.Location,
+                sa.JoinedAt
+            })
+            .ToList();
+
+        var attendedEvents = user.EventAttendances
+            .Where(ea => ea.Event.OrganizerId != userId)
+            .OrderByDescending(ea => ea.JoinedAt)
+            .Select(ea => new
+            {
+                ea.Event.Id,
+                ea.Event.Name,
+                ea.Event.Slug,
+                ea.Event.StartDate,
+                ea.Event.Location,
+                ea.JoinedAt
+            })
+            .ToList();
+
+        return Ok(new
+        {
+            user.Id,
+            user.Email,
+            user.DisplayName,
+            user.AvatarUrl,
+            user.PreferredAreas,
+            user.GamePreferences,
+            user.WillingToHost,
+            user.IsProfilePublic,
+            user.EmailConfirmed,
+            user.CreatedAt,
+            user.LockoutEnd,
+            user.TotalSessions,
+            TotalAttendedSessions = user.AttendedSessions,
+            CreatedSessions = createdSessions,
+            CreatedEvents = createdEvents,
+            OwnedGroups = ownedGroups,
+            JoinedGroups = joinedGroups,
+            AttendedSessions = attendedSessions,
+            AttendedEvents = attendedEvents
+        });
+    }
+
     [HttpPost("users/{userId}/suspend")]
     public async Task<IActionResult> SuspendUser(string userId)
     {

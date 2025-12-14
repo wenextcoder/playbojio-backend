@@ -22,6 +22,8 @@ public class ApplicationDbContext : IdentityDbContext<User>
     public DbSet<EventGroup> EventGroups => Set<EventGroup>();
     public DbSet<SessionGroup> SessionGroups => Set<SessionGroup>();
     public DbSet<SessionInvite> SessionInvites => Set<SessionInvite>();
+    public DbSet<GroupBlacklist> GroupBlacklists => Set<GroupBlacklist>();
+    public DbSet<EventBlacklist> EventBlacklists => Set<EventBlacklist>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -67,6 +69,44 @@ public class ApplicationDbContext : IdentityDbContext<User>
             .HasForeignKey(b => b.BlacklistedUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Group Blacklist relationships
+        builder.Entity<GroupBlacklist>()
+            .HasOne(gb => gb.Group)
+            .WithMany(g => g.BlacklistedUsers)
+            .HasForeignKey(gb => gb.GroupId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<GroupBlacklist>()
+            .HasOne(gb => gb.BlacklistedUser)
+            .WithMany()
+            .HasForeignKey(gb => gb.BlacklistedUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<GroupBlacklist>()
+            .HasOne(gb => gb.BlacklistedByUser)
+            .WithMany()
+            .HasForeignKey(gb => gb.BlacklistedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Event Blacklist relationships
+        builder.Entity<EventBlacklist>()
+            .HasOne(eb => eb.Event)
+            .WithMany(e => e.BlacklistedUsers)
+            .HasForeignKey(eb => eb.EventId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<EventBlacklist>()
+            .HasOne(eb => eb.BlacklistedUser)
+            .WithMany()
+            .HasForeignKey(eb => eb.BlacklistedUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<EventBlacklist>()
+            .HasOne(eb => eb.BlacklistedByUser)
+            .WithMany()
+            .HasForeignKey(eb => eb.BlacklistedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Indexes for performance
         builder.Entity<Session>()
             .HasIndex(s => s.StartTime);
@@ -76,6 +116,14 @@ public class ApplicationDbContext : IdentityDbContext<User>
 
         builder.Entity<Blacklist>()
             .HasIndex(b => new { b.UserId, b.BlacklistedUserId })
+            .IsUnique();
+
+        builder.Entity<GroupBlacklist>()
+            .HasIndex(gb => new { gb.GroupId, gb.BlacklistedUserId })
+            .IsUnique();
+
+        builder.Entity<EventBlacklist>()
+            .HasIndex(eb => new { eb.EventId, eb.BlacklistedUserId })
             .IsUnique();
     }
 }
