@@ -86,6 +86,7 @@ public record SessionResponse(
     bool IsUserAttending,
     bool IsUserOnWaitlist,
     bool IsUserHost,
+    bool IsUserEventMember,
     DateTime CreatedAt
 );
 

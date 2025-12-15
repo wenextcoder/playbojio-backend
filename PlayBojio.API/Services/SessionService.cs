@@ -247,6 +247,14 @@ public class SessionService : ISessionService
         var isUserHost = userId == session.HostId;
         var hostCount = session.IsHostParticipating ? 1 : 0;
         var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount);
+        
+        // Check if user is a member of the event (for event sessions)
+        var isUserEventMember = false;
+        if (userId != null && session.EventId != null)
+        {
+            isUserEventMember = await _context.EventAttendees
+                .AnyAsync(ea => ea.EventId == session.EventId && ea.UserId == userId);
+        }
 
         return new SessionResponse(
             session.Id,
@@ -282,6 +290,7 @@ public class SessionService : ISessionService
             isUserAttending,
             isUserOnWaitlist,
             isUserHost,
+            isUserEventMember,
             session.CreatedAt
         );
     }
@@ -309,6 +318,14 @@ public class SessionService : ISessionService
         var isUserHost = userId == session.HostId;
         var hostCount = session.IsHostParticipating ? 1 : 0;
         var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount);
+        
+        // Check if user is a member of the event (for event sessions)
+        var isUserEventMember = false;
+        if (userId != null && session.EventId != null)
+        {
+            isUserEventMember = await _context.EventAttendees
+                .AnyAsync(ea => ea.EventId == session.EventId && ea.UserId == userId);
+        }
 
         return new SessionResponse(
             session.Id,
@@ -344,6 +361,7 @@ public class SessionService : ISessionService
             isUserAttending,
             isUserOnWaitlist,
             isUserHost,
+            isUserEventMember,
             session.CreatedAt
         );
     }
