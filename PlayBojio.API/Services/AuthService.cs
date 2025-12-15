@@ -12,6 +12,7 @@ public interface IAuthService
 {
     Task<RegisterResult> RegisterAsync(RegisterRequest request);
     Task<AuthResponse?> LoginAsync(LoginRequest request);
+    Task<AuthResponse> GenerateTokenForUser(User user);
 }
 
 public class AuthService : IAuthService
@@ -66,6 +67,18 @@ public class AuthService : IAuthService
         if (!isPasswordValid)
             return null;
 
+        var token = await GenerateJwtToken(user);
+
+        return new AuthResponse(
+            token,
+            user.Id,
+            user.Email!,
+            user.DisplayName
+        );
+    }
+
+    public async Task<AuthResponse> GenerateTokenForUser(User user)
+    {
         var token = await GenerateJwtToken(user);
 
         return new AuthResponse(

@@ -5,6 +5,7 @@ using PlayBojio.API.DTOs;
 using PlayBojio.API.Models;
 using PlayBojio.API.Services;
 using System.Security.Claims;
+using Google.Apis.Auth;
 
 namespace PlayBojio.API.Controllers;
 
@@ -14,11 +15,13 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly UserManager<User> _userManager;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(IAuthService authService, UserManager<User> userManager)
+    public AuthController(IAuthService authService, UserManager<User> userManager, IConfiguration configuration)
     {
         _authService = authService;
         _userManager = userManager;
+        _configuration = configuration;
     }
 
     [HttpPost("register")]
@@ -195,6 +198,72 @@ public class AuthController : ControllerBase
         // Example: await _emailService.SendPasswordResetEmailAsync(user.Email, token);
         
         return Ok(new { message = "If an account exists with this email, a password reset link has been sent." });
+    }
+
+    [HttpPost("google")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+    {
+        try
+        {
+            var googleClientId = _configuration["Google:ClientId"];
+            
+            // Verify the Google ID token
+            var validPayload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = new[] { googleClientId }
+            });
+
+            if (validPayload == null)
+                return Unauthorized(new { message = "Invalid Google token" });
+
+            // Check if user exists
+            var user = await _userManager.FindByEmailAsync(validPayload.Email);
+
+            if (user == null)
+            {
+                // Create new user
+                user = new User
+                {
+                    UserName = validPayload.Email,
+                    Email = validPayload.Email,
+                    DisplayName = validPayload.Name ?? validPayload.Email.Split('@')[0],
+                    AvatarUrl = validPayload.Picture,
+                    EmailConfirmed = true, // Google emails are already verified
+                    IsProfilePublic = true,
+                    WillingToHost = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var result = await _userManager.CreateAsync(user);
+                
+                if (!result.Succeeded)
+                    return BadRequest(new { message = "Failed to create user", errors = result.Errors.Select(e => e.Description) });
+
+                // Add Google login info
+                await _userManager.AddLoginAsync(user, new UserLoginInfo("Google", validPayload.Subject, "Google"));
+            }
+            else
+            {
+                // Check if Google login already linked
+                var logins = await _userManager.GetLoginsAsync(user);
+                if (!logins.Any(l => l.LoginProvider == "Google"))
+                {
+                    await _userManager.AddLoginAsync(user, new UserLoginInfo("Google", validPayload.Subject, "Google"));
+                }
+            }
+
+            // Generate JWT token
+            var loginResult = await _authService.GenerateTokenForUser(user);
+            
+            if (loginResult == null)
+                return Unauthorized(new { message = "Failed to generate token" });
+
+            return Ok(loginResult);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = "Google authentication failed", error = ex.Message });
+        }
     }
 }
 

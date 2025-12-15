@@ -56,3 +56,7 @@ public record ForgotPasswordRequest(
     string Email
 );
 
+public record GoogleLoginRequest(
+    string IdToken
+);
+
