@@ -49,6 +49,7 @@ public record EventResponse(
     bool IsCancelled,
     string OrganizerId,
     string OrganizerName,
+    string? OrganizerAvatarUrl,
     int AttendeeCount,
     bool IsUserAttending,
     bool IsUserOrganizer,

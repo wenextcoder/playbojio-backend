@@ -81,6 +81,7 @@ public record SessionResponse(
     bool IsCancelled,
     string HostId,
     string HostName,
+    string? HostAvatarUrl,
     int CurrentPlayers,
     int WaitlistCount,
     bool IsUserAttending,
