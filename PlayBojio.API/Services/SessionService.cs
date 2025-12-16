@@ -390,15 +390,16 @@ public class SessionService : ISessionService
         if (newbieFriendly.HasValue)
             query = query.Where(s => s.IsNewbieFriendly == newbieFriendly.Value);
 
-        // Text search across title, primary game, description, location, and game tags
+        // Text search across title, primary game, description, location, game tags, and event name
         if (!string.IsNullOrEmpty(searchText))
         {
-            query = query.Where(s => 
-                s.Title.Contains(searchText) || 
+            query = query.Where(s =>
+                s.Title.Contains(searchText) ||
                 s.PrimaryGame.Contains(searchText) ||
                 (s.AdditionalNotes != null && s.AdditionalNotes.Contains(searchText)) ||
                 s.Location.Contains(searchText) ||
-                (s.GameTags != null && s.GameTags.Contains(searchText)));
+                (s.GameTags != null && s.GameTags.Contains(searchText)) ||
+                (s.Event != null && s.Event.Name.Contains(searchText)));
         }
 
         var totalCountQuery = query;
