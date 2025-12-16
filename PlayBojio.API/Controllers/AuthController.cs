@@ -152,6 +152,28 @@ public class AuthController : ControllerBase
     }
 
     [Authorize]
+    [HttpGet("users/search")]
+    public async Task<IActionResult> SearchUsers([FromQuery] string query)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+            return BadRequest(new { message = "Search query must be at least 2 characters" });
+
+        var users = _userManager.Users
+            .Where(u => u.DisplayName.Contains(query) || u.Email.Contains(query))
+            .Take(20)
+            .Select(u => new
+            {
+                Id = u.Id,
+                DisplayName = u.DisplayName,
+                Email = u.Email,
+                AvatarUrl = u.AvatarUrl
+            })
+            .ToList();
+
+        return Ok(users);
+    }
+
+    [Authorize]
     [HttpPut("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
