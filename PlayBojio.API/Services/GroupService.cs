@@ -186,6 +186,8 @@ public class GroupService : IGroupService
         if (group == null)
             return false;
 
+        // For private groups, users should use the join request system
+        // This method is only for public groups
         if (group.Visibility == GroupVisibility.Private)
             return false;
 
@@ -203,7 +205,8 @@ public class GroupService : IGroupService
         {
             GroupId = groupId,
             UserId = userId,
-            IsAdmin = false
+            IsAdmin = false,
+            JoinedAt = DateTime.UtcNow
         });
 
         await _context.SaveChangesAsync();

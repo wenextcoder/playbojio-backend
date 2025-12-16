@@ -14,11 +14,19 @@ namespace PlayBojio.API.Controllers;
 public class GroupsController : ControllerBase
 {
     private readonly IGroupService _groupService;
+    private readonly IGroupJoinRequestService _groupJoinRequestService;
+    private readonly IGroupInvitationService _groupInvitationService;
     private readonly ApplicationDbContext _context;
 
-    public GroupsController(IGroupService groupService, ApplicationDbContext context)
+    public GroupsController(
+        IGroupService groupService,
+        IGroupJoinRequestService groupJoinRequestService,
+        IGroupInvitationService groupInvitationService,
+        ApplicationDbContext context)
     {
         _groupService = groupService;
+        _groupJoinRequestService = groupJoinRequestService;
+        _groupInvitationService = groupInvitationService;
         _context = context;
     }
 
@@ -394,6 +402,185 @@ public class GroupsController : ControllerBase
 
         _context.GroupBlacklists.Remove(blacklist);
         await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    // ==================== Group Join Requests ====================
+
+    /// <summary>
+    /// Request to join a private group
+    /// </summary>
+    [HttpPost("{id}/join-request")]
+    public async Task<IActionResult> CreateJoinRequest(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var result = await _groupJoinRequestService.CreateJoinRequestAsync(id, userId);
+        if (!result)
+            return BadRequest(new { message = "Failed to create join request. You may already be a member or blacklisted." });
+
+        return Ok(new { message = "Join request sent successfully" });
+    }
+
+    /// <summary>
+    /// Get pending join requests for a group (admin only)
+    /// </summary>
+    [HttpGet("{id}/join-requests")]
+    public async Task<IActionResult> GetGroupJoinRequests(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var requests = await _groupJoinRequestService.GetGroupJoinRequestsAsync(id, userId);
+        return Ok(requests);
+    }
+
+    /// <summary>
+    /// Get my join requests
+    /// </summary>
+    [HttpGet("my-join-requests")]
+    public async Task<IActionResult> GetMyJoinRequests()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var requests = await _groupJoinRequestService.GetMyJoinRequestsAsync(userId);
+        return Ok(requests);
+    }
+
+    /// <summary>
+    /// Approve a join request (admin only)
+    /// </summary>
+    [HttpPost("{id}/join-requests/{requestId}/approve")]
+    public async Task<IActionResult> ApproveJoinRequest(int id, int requestId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var result = await _groupJoinRequestService.ApproveJoinRequestAsync(requestId, userId);
+        if (!result)
+            return BadRequest(new { message = "Failed to approve join request" });
+
+        return Ok(new { message = "Join request approved" });
+    }
+
+    /// <summary>
+    /// Reject a join request (admin only)
+    /// </summary>
+    [HttpPost("{id}/join-requests/{requestId}/reject")]
+    public async Task<IActionResult> RejectJoinRequest(int id, int requestId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var result = await _groupJoinRequestService.RejectJoinRequestAsync(requestId, userId);
+        if (!result)
+            return BadRequest(new { message = "Failed to reject join request" });
+
+        return Ok(new { message = "Join request rejected" });
+    }
+
+    // ==================== Group Invitations ====================
+
+    /// <summary>
+    /// Invite a user to the group (admin only)
+    /// </summary>
+    [HttpPost("{id}/invite/{invitedUserId}")]
+    public async Task<IActionResult> InviteUserToGroup(int id, string invitedUserId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var result = await _groupInvitationService.InviteUserToGroupAsync(id, invitedUserId, userId);
+        if (!result)
+            return BadRequest(new { message = "Failed to invite user. User may already be a member or blacklisted." });
+
+        return Ok(new { message = "Invitation sent successfully" });
+    }
+
+    /// <summary>
+    /// Get invitations for a group (admin only)
+    /// </summary>
+    [HttpGet("{id}/invitations")]
+    public async Task<IActionResult> GetGroupInvitations(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var invitations = await _groupInvitationService.GetGroupInvitationsAsync(id, userId);
+        return Ok(invitations);
+    }
+
+    /// <summary>
+    /// Get my group invitations
+    /// </summary>
+    [HttpGet("my-invitations")]
+    public async Task<IActionResult> GetMyInvitations()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var invitations = await _groupInvitationService.GetMyInvitationsAsync(userId);
+        return Ok(invitations);
+    }
+
+    /// <summary>
+    /// Accept a group invitation
+    /// </summary>
+    [HttpPost("invitations/{invitationId}/accept")]
+    public async Task<IActionResult> AcceptInvitation(int invitationId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var result = await _groupInvitationService.AcceptInvitationAsync(invitationId, userId);
+        if (!result)
+            return BadRequest(new { message = "Failed to accept invitation" });
+
+        return Ok(new { message = "Invitation accepted" });
+    }
+
+    /// <summary>
+    /// Decline a group invitation
+    /// </summary>
+    [HttpPost("invitations/{invitationId}/decline")]
+    public async Task<IActionResult> DeclineInvitation(int invitationId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var result = await _groupInvitationService.DeclineInvitationAsync(invitationId, userId);
+        if (!result)
+            return BadRequest(new { message = "Failed to decline invitation" });
+
+        return Ok(new { message = "Invitation declined" });
+    }
+
+    /// <summary>
+    /// Cancel a group invitation (admin only)
+    /// </summary>
+    [HttpDelete("{id}/invitations/{invitationId}")]
+    public async Task<IActionResult> CancelInvitation(int id, int invitationId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var result = await _groupInvitationService.CancelInvitationAsync(invitationId, userId);
+        if (!result)
+            return BadRequest(new { message = "Failed to cancel invitation" });
 
         return NoContent();
     }

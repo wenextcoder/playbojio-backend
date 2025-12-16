@@ -92,6 +92,9 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
+builder.Services.AddScoped<IFriendService, FriendService>();
+builder.Services.AddScoped<IGroupJoinRequestService, GroupJoinRequestService>();
+builder.Services.AddScoped<IGroupInvitationService, GroupInvitationService>();
 builder.Services.AddSingleton<IR2StorageService, R2StorageService>();
 
 // CORS

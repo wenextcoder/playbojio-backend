@@ -24,6 +24,10 @@ public class ApplicationDbContext : IdentityDbContext<User>
     public DbSet<SessionInvite> SessionInvites => Set<SessionInvite>();
     public DbSet<GroupBlacklist> GroupBlacklists => Set<GroupBlacklist>();
     public DbSet<EventBlacklist> EventBlacklists => Set<EventBlacklist>();
+    public DbSet<Friend> Friends => Set<Friend>();
+    public DbSet<FriendRequest> FriendRequests => Set<FriendRequest>();
+    public DbSet<GroupJoinRequest> GroupJoinRequests => Set<GroupJoinRequest>();
+    public DbSet<GroupInvitation> GroupInvitations => Set<GroupInvitation>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -125,6 +129,84 @@ public class ApplicationDbContext : IdentityDbContext<User>
         builder.Entity<EventBlacklist>()
             .HasIndex(eb => new { eb.EventId, eb.BlacklistedUserId })
             .IsUnique();
+
+        // Friend relationships
+        builder.Entity<Friend>()
+            .HasOne(f => f.User)
+            .WithMany()
+            .HasForeignKey(f => f.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Friend>()
+            .HasOne(f => f.FriendUser)
+            .WithMany()
+            .HasForeignKey(f => f.FriendId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Friend>()
+            .HasIndex(f => new { f.UserId, f.FriendId })
+            .IsUnique();
+
+        // FriendRequest relationships
+        builder.Entity<FriendRequest>()
+            .HasOne(fr => fr.Sender)
+            .WithMany()
+            .HasForeignKey(fr => fr.SenderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<FriendRequest>()
+            .HasOne(fr => fr.Receiver)
+            .WithMany()
+            .HasForeignKey(fr => fr.ReceiverId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<FriendRequest>()
+            .HasIndex(fr => new { fr.SenderId, fr.ReceiverId })
+            .IsUnique();
+
+        // GroupJoinRequest relationships
+        builder.Entity<GroupJoinRequest>()
+            .HasOne(gjr => gjr.Group)
+            .WithMany()
+            .HasForeignKey(gjr => gjr.GroupId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<GroupJoinRequest>()
+            .HasOne(gjr => gjr.User)
+            .WithMany()
+            .HasForeignKey(gjr => gjr.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<GroupJoinRequest>()
+            .HasOne(gjr => gjr.RespondedByUser)
+            .WithMany()
+            .HasForeignKey(gjr => gjr.RespondedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<GroupJoinRequest>()
+            .HasIndex(gjr => new { gjr.GroupId, gjr.UserId, gjr.Status });
+
+        // GroupInvitation relationships
+        builder.Entity<GroupInvitation>()
+            .HasOne(gi => gi.Group)
+            .WithMany()
+            .HasForeignKey(gi => gi.GroupId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<GroupInvitation>()
+            .HasOne(gi => gi.InvitedUser)
+            .WithMany()
+            .HasForeignKey(gi => gi.InvitedUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<GroupInvitation>()
+            .HasOne(gi => gi.InvitedByUser)
+            .WithMany()
+            .HasForeignKey(gi => gi.InvitedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<GroupInvitation>()
+            .HasIndex(gi => new { gi.GroupId, gi.InvitedUserId, gi.Status });
     }
 }
 
