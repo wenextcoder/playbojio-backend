@@ -58,6 +58,9 @@ public class AuthController : ControllerBase
         if (user == null)
             return NotFound();
 
+        // Check if user has a password (to determine if they logged in with Google)
+        var hasPassword = await _userManager.HasPasswordAsync(user);
+
         var response = new UserProfileResponse(
             user.Id,
             user.Email!,
@@ -69,7 +72,8 @@ public class AuthController : ControllerBase
             user.IsProfilePublic,
             user.AttendedSessions,
             user.TotalSessions,
-            user.CreatedAt
+            user.CreatedAt,
+            hasPassword
         );
 
         return Ok(response);
@@ -97,6 +101,9 @@ public class AuthController : ControllerBase
 
         await _userManager.UpdateAsync(user);
 
+        // Check if user has a password
+        var hasPassword = await _userManager.HasPasswordAsync(user);
+
         var response = new UserProfileResponse(
             user.Id,
             user.Email!,
@@ -108,7 +115,8 @@ public class AuthController : ControllerBase
             user.IsProfilePublic,
             user.AttendedSessions,
             user.TotalSessions,
-            user.CreatedAt
+            user.CreatedAt,
+            hasPassword
         );
 
         return Ok(response);
@@ -122,6 +130,9 @@ public class AuthController : ControllerBase
         if (user == null)
             return NotFound();
 
+        // Check if user has a password
+        var hasPassword = await _userManager.HasPasswordAsync(user);
+
         var response = new UserProfileResponse(
             user.Id,
             user.IsProfilePublic ? user.Email! : "",
@@ -133,7 +144,8 @@ public class AuthController : ControllerBase
             user.IsProfilePublic,
             user.AttendedSessions,
             user.TotalSessions,
-            user.CreatedAt
+            user.CreatedAt,
+            hasPassword
         );
 
         return Ok(response);
@@ -151,8 +163,25 @@ public class AuthController : ControllerBase
         if (user == null)
             return NotFound();
 
-        var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        // Check if user has a password (traditional login) or not (Google login)
+        var hasPassword = await _userManager.HasPasswordAsync(user);
         
+        IdentityResult result;
+        
+        if (!hasPassword)
+        {
+            // User logged in with Google - add password without requiring current password
+            result = await _userManager.AddPasswordAsync(user, request.NewPassword);
+        }
+        else
+        {
+            // Traditional user - change password with current password verification
+            if (string.IsNullOrEmpty(request.CurrentPassword))
+                return BadRequest(new { message = "Current password is required" });
+                
+            result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        }
+
         if (!result.Succeeded)
             return BadRequest(new { message = "Failed to change password", errors = result.Errors.Select(e => e.Description) });
 

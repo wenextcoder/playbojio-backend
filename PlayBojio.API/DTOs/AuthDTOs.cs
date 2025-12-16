@@ -38,7 +38,8 @@ public record UserProfileResponse(
     bool IsProfilePublic,
     int AttendedSessions,
     int TotalSessions,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    bool HasPassword
 );
 
 public record RegisterResult(
@@ -48,7 +49,7 @@ public record RegisterResult(
 );
 
 public record ChangePasswordRequest(
-    string CurrentPassword,
+    string? CurrentPassword,
     string NewPassword
 );
 
