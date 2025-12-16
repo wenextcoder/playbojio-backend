@@ -13,9 +13,10 @@ public interface ISessionService
     Task<bool> CancelSessionAsync(int sessionId, string userId);
     Task<SessionResponse?> GetSessionAsync(int sessionId, string? userId);
     Task<SessionResponse?> GetSessionBySlugAsync(string slug, string? userId);
-    Task<PaginatedResult<SessionListResponse>> SearchSessionsAsync(string? userId, DateTime? fromDate, DateTime? toDate, 
+    Task<PaginatedResult<SessionListResponse>> SearchSessionsAsync(string? userId, DateTime? fromDate, DateTime? toDate,
         string? location, string? gameType, bool? availableOnly, bool? newbieFriendly, string? searchText, int page = 1, int pageSize = 30);
     Task<List<SessionListResponse>> GetUserSessionsAsync(string userId);
+    Task<List<SessionListResponse>> GetUserAttendingSessionsAsync(string userId);
     Task<List<SessionListResponse>> GetEventSessionsAsync(int eventId, string? userId);
     Task<bool> JoinSessionAsync(int sessionId, string userId);
     Task<bool> LeaveSessionAsync(int sessionId, string userId);
@@ -684,6 +685,46 @@ public class SessionService : ISessionService
             .Include(s => s.Attendees)
             .Include(s => s.Event)
             .Where(s => s.HostId == userId && !s.IsCancelled)
+            .OrderByDescending(s => s.StartTime)
+            .ToListAsync();
+
+        return sessions.Select(s => {
+            var hostCount = s.IsHostParticipating ? 1 : 0;
+            var availableSlots = s.MaxPlayers - (s.Attendees.Count + s.ReservedSlots + hostCount);
+            return new SessionListResponse(
+                s.Id,
+                s.Title,
+                s.Slug,
+                s.ImageUrl,
+                s.PrimaryGame,
+                s.StartTime,
+                s.Location,
+                s.Attendees.Count,
+                s.MaxPlayers,
+                availableSlots,
+                s.Host.DisplayName,
+                s.IsNewbieFriendly,
+                s.CostPerPerson,
+                s.SessionType,
+                s.EventId,
+                s.Event?.Name
+            );
+        }).ToList();
+    }
+
+    public async Task<List<SessionListResponse>> GetUserAttendingSessionsAsync(string userId)
+    {
+        // Get sessions where user is an attendee (not the host)
+        var attendingSessionIds = await _context.SessionAttendees
+            .Where(sa => sa.UserId == userId)
+            .Select(sa => sa.SessionId)
+            .ToListAsync();
+
+        var sessions = await _context.Sessions
+            .Include(s => s.Host)
+            .Include(s => s.Attendees)
+            .Include(s => s.Event)
+            .Where(s => attendingSessionIds.Contains(s.Id) && !s.IsCancelled)
             .OrderByDescending(s => s.StartTime)
             .ToListAsync();
 

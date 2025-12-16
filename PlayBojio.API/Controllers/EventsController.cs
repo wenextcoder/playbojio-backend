@@ -48,6 +48,17 @@ public class EventsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("attending")]
+    public async Task<IActionResult> GetAttendingEvents()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var result = await _eventService.GetUserAttendingEventsAsync(userId);
+        return Ok(result);
+    }
+
     [HttpGet("{id:int}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetEvent(int id)

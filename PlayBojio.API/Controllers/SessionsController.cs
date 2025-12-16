@@ -44,6 +44,17 @@ public class SessionsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("attending")]
+    public async Task<IActionResult> GetAttendingSessions()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var result = await _sessionService.GetUserAttendingSessionsAsync(userId);
+        return Ok(result);
+    }
+
     [HttpGet("{id:int}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetSession(int id)

@@ -15,6 +15,7 @@ public interface IEventService
     Task<EventResponse?> GetEventBySlugAsync(string slug, string? userId);
     Task<PaginatedResult<EventListResponse>> SearchEventsAsync(string? userId, DateTime? fromDate, DateTime? toDate, string? location, string? searchText, int page = 1, int pageSize = 30);
     Task<List<EventListResponse>> GetUserEventsAsync(string userId);
+    Task<List<EventListResponse>> GetUserAttendingEventsAsync(string userId);
     Task<bool> JoinEventAsync(int eventId, string userId);
     Task<bool> LeaveEventAsync(int eventId, string userId);
 }
@@ -309,6 +310,36 @@ public class EventService : IEventService
             .Include(e => e.Organizer)
             .Include(e => e.Attendees)
             .Where(e => e.OrganizerId == userId && !e.IsCancelled)
+            .OrderByDescending(e => e.StartDate)
+            .ToListAsync();
+
+        return events.Select(e => new EventListResponse(
+            e.Id,
+            e.Name,
+            e.Slug,
+            e.ImageUrl,
+            e.StartDate,
+            e.EndDate,
+            e.Location,
+            e.Attendees.Count,
+            e.MaxParticipants,
+            e.Organizer.DisplayName,
+            e.Price
+        )).ToList();
+    }
+
+    public async Task<List<EventListResponse>> GetUserAttendingEventsAsync(string userId)
+    {
+        // Get events where user is an attendee (not the organizer)
+        var attendingEventIds = await _context.EventAttendees
+            .Where(ea => ea.UserId == userId)
+            .Select(ea => ea.EventId)
+            .ToListAsync();
+
+        var events = await _context.Events
+            .Include(e => e.Organizer)
+            .Include(e => e.Attendees)
+            .Where(e => attendingEventIds.Contains(e.Id) && !e.IsCancelled)
             .OrderByDescending(e => e.StartDate)
             .ToListAsync();
 
