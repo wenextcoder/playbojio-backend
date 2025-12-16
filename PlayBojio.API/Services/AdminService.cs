@@ -202,6 +202,7 @@ public class AdminService : IAdminService
             .Select(e => new
             {
                 e.Id,
+                e.Slug,
                 e.Name,
                 e.StartDate,
                 e.EndDate,
@@ -236,6 +237,7 @@ public class AdminService : IAdminService
             .Select(s => new
             {
                 s.Id,
+                s.Slug,
                 s.Title,
                 s.PrimaryGame,
                 s.StartTime,
