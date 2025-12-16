@@ -121,12 +121,13 @@ public class SessionsController : ControllerBase
         [FromQuery] bool? availableOnly,
         [FromQuery] bool? newbieFriendly,
         [FromQuery] string? searchText,
+        [FromQuery] int? eventId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 30)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var result = await _sessionService.SearchSessionsAsync(
-            userId, fromDate, toDate, location, gameType, availableOnly, newbieFriendly, searchText, page, pageSize);
+            userId, fromDate, toDate, location, gameType, availableOnly, newbieFriendly, searchText, eventId, page, pageSize);
 
         return Ok(result);
     }

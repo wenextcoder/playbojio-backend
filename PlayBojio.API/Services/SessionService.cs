@@ -14,7 +14,7 @@ public interface ISessionService
     Task<SessionResponse?> GetSessionAsync(int sessionId, string? userId);
     Task<SessionResponse?> GetSessionBySlugAsync(string slug, string? userId);
     Task<PaginatedResult<SessionListResponse>> SearchSessionsAsync(string? userId, DateTime? fromDate, DateTime? toDate,
-        string? location, string? gameType, bool? availableOnly, bool? newbieFriendly, string? searchText, int page = 1, int pageSize = 30);
+        string? location, string? gameType, bool? availableOnly, bool? newbieFriendly, string? searchText, int? eventId = null, int page = 1, int pageSize = 30);
     Task<List<SessionListResponse>> GetUserSessionsAsync(string userId);
     Task<List<SessionListResponse>> GetUserAttendingSessionsAsync(string userId);
     Task<List<SessionListResponse>> GetEventSessionsAsync(int eventId, string? userId);
@@ -369,8 +369,8 @@ public class SessionService : ISessionService
         );
     }
 
-    public async Task<PaginatedResult<SessionListResponse>> SearchSessionsAsync(string? userId, DateTime? fromDate, 
-        DateTime? toDate, string? location, string? gameType, bool? availableOnly, bool? newbieFriendly, string? searchText, int page = 1, int pageSize = 30)
+    public async Task<PaginatedResult<SessionListResponse>> SearchSessionsAsync(string? userId, DateTime? fromDate,
+        DateTime? toDate, string? location, string? gameType, bool? availableOnly, bool? newbieFriendly, string? searchText, int? eventId = null, int page = 1, int pageSize = 30)
     {
         var query = _context.Sessions
             .Include(s => s.Host)
@@ -383,6 +383,9 @@ public class SessionService : ISessionService
 
         if (toDate.HasValue)
             query = query.Where(s => s.StartTime <= toDate.Value);
+
+        if (eventId.HasValue)
+            query = query.Where(s => s.EventId == eventId.Value);
 
         if (!string.IsNullOrEmpty(location))
             query = query.Where(s => s.Location.Contains(location));
