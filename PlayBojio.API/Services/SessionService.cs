@@ -83,7 +83,9 @@ public class SessionService : ISessionService
             Language = request.Language,
             AdditionalNotes = request.AdditionalNotes,
             Visibility = request.Visibility,
-            HostId = userId
+            HostId = userId,
+            DummyAttendeesCount = request.DummyAttendeesCount,
+            DummyAttendeesDescription = request.DummyAttendeesDescription
         };
 
         _context.Sessions.Add(session);
@@ -168,6 +170,8 @@ public class SessionService : ISessionService
         session.Language = request.Language;
         session.AdditionalNotes = request.AdditionalNotes;
         session.Visibility = request.Visibility;
+        session.DummyAttendeesCount = request.DummyAttendeesCount;
+        session.DummyAttendeesDescription = request.DummyAttendeesDescription;
         session.UpdatedAt = DateTime.UtcNow;
 
         // Update groups
@@ -247,14 +251,22 @@ public class SessionService : ISessionService
         var isUserOnWaitlist = userId != null && session.Waitlist.Any(w => w.UserId == userId);
         var isUserHost = userId == session.HostId;
         var hostCount = session.IsHostParticipating ? 1 : 0;
-        var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount);
+        // Include dummy attendees in slot calculation
+        var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount + session.DummyAttendeesCount);
         
         // Check if user is a member of the event (for event sessions)
         var isUserEventMember = false;
+        var isUserEventOrganizer = false;
         if (userId != null && session.EventId != null)
         {
             isUserEventMember = await _context.EventAttendees
                 .AnyAsync(ea => ea.EventId == session.EventId && ea.UserId == userId);
+            
+            // Check if user is the event organizer
+            if (session.Event != null)
+            {
+                isUserEventOrganizer = session.Event.OrganizerId == userId;
+            }
         }
 
         return new SessionResponse(
@@ -293,7 +305,10 @@ public class SessionService : ISessionService
             isUserOnWaitlist,
             isUserHost,
             isUserEventMember,
-            session.CreatedAt
+            isUserEventOrganizer,
+            session.CreatedAt,
+            session.DummyAttendeesCount,
+            session.DummyAttendeesDescription
         );
     }
 
@@ -319,14 +334,22 @@ public class SessionService : ISessionService
         var isUserOnWaitlist = userId != null && session.Waitlist.Any(w => w.UserId == userId);
         var isUserHost = userId == session.HostId;
         var hostCount = session.IsHostParticipating ? 1 : 0;
-        var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount);
+        // Include dummy attendees in slot calculation
+        var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount + session.DummyAttendeesCount);
         
         // Check if user is a member of the event (for event sessions)
         var isUserEventMember = false;
+        var isUserEventOrganizer = false;
         if (userId != null && session.EventId != null)
         {
             isUserEventMember = await _context.EventAttendees
                 .AnyAsync(ea => ea.EventId == session.EventId && ea.UserId == userId);
+            
+            // Check if user is the event organizer
+            if (session.Event != null)
+            {
+                isUserEventOrganizer = session.Event.OrganizerId == userId;
+            }
         }
 
         return new SessionResponse(
@@ -365,7 +388,10 @@ public class SessionService : ISessionService
             isUserOnWaitlist,
             isUserHost,
             isUserEventMember,
-            session.CreatedAt
+            isUserEventOrganizer,
+            session.CreatedAt,
+            session.DummyAttendeesCount,
+            session.DummyAttendeesDescription
         );
     }
 

@@ -55,7 +55,9 @@ public class EventService : IEventService
             Price = request.Price,
             EventType = request.EventType,
             Visibility = request.Visibility,
-            OrganizerId = userId
+            OrganizerId = userId,
+            DummyAttendeesCount = request.DummyAttendeesCount,
+            DummyAttendeesDescription = request.DummyAttendeesDescription
         };
 
         _context.Events.Add(evt);
@@ -117,6 +119,8 @@ public class EventService : IEventService
         evt.Price = request.Price;
         evt.EventType = request.EventType;
         evt.Visibility = request.Visibility;
+        evt.DummyAttendeesCount = request.DummyAttendeesCount;
+        evt.DummyAttendeesDescription = request.DummyAttendeesDescription;
         evt.UpdatedAt = DateTime.UtcNow;
 
         var existingGroups = await _context.EventGroups
@@ -193,7 +197,9 @@ public class EventService : IEventService
             attendeeCount,
             isUserAttending,
             isUserOrganizer,
-            evt.CreatedAt
+            evt.CreatedAt,
+            evt.DummyAttendeesCount,
+            evt.DummyAttendeesDescription
         );
     }
 
@@ -236,7 +242,9 @@ public class EventService : IEventService
             attendeeCount,
             isUserAttending,
             isUserOrganizer,
-            evt.CreatedAt
+            evt.CreatedAt,
+            evt.DummyAttendeesCount,
+            evt.DummyAttendeesDescription
         );
     }
 

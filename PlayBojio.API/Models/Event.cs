@@ -18,6 +18,10 @@ public class Event
     public bool IsCancelled { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    
+    // Dummy Attendees
+    public int DummyAttendeesCount { get; set; } = 0;
+    public string? DummyAttendeesDescription { get; set; }
 
     public string OrganizerId { get; set; } = string.Empty;
     public User Organizer { get; set; } = null!;

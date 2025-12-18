@@ -25,7 +25,9 @@ public record CreateSessionRequest(
     string? AdditionalNotes,
     SessionVisibility Visibility,
     int[]? GroupIds,
-    string[]? InvitedUserIds
+    string[]? InvitedUserIds,
+    int DummyAttendeesCount,
+    string? DummyAttendeesDescription
 );
 
 public record UpdateSessionRequest(
@@ -49,7 +51,9 @@ public record UpdateSessionRequest(
     string? AdditionalNotes,
     SessionVisibility Visibility,
     int[]? GroupIds,
-    string[]? InvitedUserIds
+    string[]? InvitedUserIds,
+    int DummyAttendeesCount,
+    string? DummyAttendeesDescription
 );
 
 public record SessionResponse(
@@ -88,7 +92,10 @@ public record SessionResponse(
     bool IsUserOnWaitlist,
     bool IsUserHost,
     bool IsUserEventMember,
-    DateTime CreatedAt
+    bool IsUserEventOrganizer,
+    DateTime CreatedAt,
+    int DummyAttendeesCount,
+    string? DummyAttendeesDescription
 );
 
 public record SessionListResponse(

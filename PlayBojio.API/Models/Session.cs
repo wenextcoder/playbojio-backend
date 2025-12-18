@@ -29,6 +29,10 @@ public class Session
     public bool IsCancelled { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    
+    // Dummy Attendees
+    public int DummyAttendeesCount { get; set; } = 0;
+    public string? DummyAttendeesDescription { get; set; }
 
     public string HostId { get; set; } = string.Empty;
     public User Host { get; set; } = null!;

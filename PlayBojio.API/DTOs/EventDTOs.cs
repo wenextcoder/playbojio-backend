@@ -14,7 +14,9 @@ public record CreateEventRequest(
     decimal? Price,
     string EventType,
     EventVisibility Visibility,
-    int[]? GroupIds
+    int[]? GroupIds,
+    int DummyAttendeesCount,
+    string? DummyAttendeesDescription
 );
 
 public record UpdateEventRequest(
@@ -29,7 +31,9 @@ public record UpdateEventRequest(
     decimal? Price,
     string EventType,
     EventVisibility Visibility,
-    int[]? GroupIds
+    int[]? GroupIds,
+    int DummyAttendeesCount,
+    string? DummyAttendeesDescription
 );
 
 public record EventResponse(
@@ -53,7 +57,9 @@ public record EventResponse(
     int AttendeeCount,
     bool IsUserAttending,
     bool IsUserOrganizer,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    int DummyAttendeesCount,
+    string? DummyAttendeesDescription
 );
 
 public record EventListResponse(
