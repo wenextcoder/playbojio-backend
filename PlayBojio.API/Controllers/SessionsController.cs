@@ -34,24 +34,24 @@ public class SessionsController : ControllerBase
     }
 
     [HttpGet("my-sessions")]
-    public async Task<IActionResult> GetMySessions()
+    public async Task<IActionResult> GetMySessions([FromQuery] bool? upcomingOnly)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
             return Unauthorized();
 
-        var result = await _sessionService.GetUserSessionsAsync(userId);
+        var result = await _sessionService.GetUserSessionsAsync(userId, upcomingOnly ?? true);
         return Ok(result);
     }
 
     [HttpGet("attending")]
-    public async Task<IActionResult> GetAttendingSessions()
+    public async Task<IActionResult> GetAttendingSessions([FromQuery] bool? upcomingOnly)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
             return Unauthorized();
 
-        var result = await _sessionService.GetUserAttendingSessionsAsync(userId);
+        var result = await _sessionService.GetUserAttendingSessionsAsync(userId, upcomingOnly ?? true);
         return Ok(result);
     }
 
@@ -120,6 +120,7 @@ public class SessionsController : ControllerBase
         [FromQuery] string? gameType,
         [FromQuery] bool? availableOnly,
         [FromQuery] bool? newbieFriendly,
+        [FromQuery] bool? upcomingOnly,
         [FromQuery] string? searchText,
         [FromQuery] int? eventId,
         [FromQuery] int page = 1,
@@ -127,7 +128,7 @@ public class SessionsController : ControllerBase
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var result = await _sessionService.SearchSessionsAsync(
-            userId, fromDate, toDate, location, gameType, availableOnly, newbieFriendly, searchText, eventId, page, pageSize);
+            userId, fromDate, toDate, location, gameType, availableOnly, newbieFriendly, upcomingOnly ?? true, searchText, eventId, page, pageSize);
 
         return Ok(result);
     }

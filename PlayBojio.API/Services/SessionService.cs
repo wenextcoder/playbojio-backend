@@ -14,9 +14,9 @@ public interface ISessionService
     Task<SessionResponse?> GetSessionAsync(int sessionId, string? userId);
     Task<SessionResponse?> GetSessionBySlugAsync(string slug, string? userId);
     Task<PaginatedResult<SessionListResponse>> SearchSessionsAsync(string? userId, DateTime? fromDate, DateTime? toDate,
-        string? location, string? gameType, bool? availableOnly, bool? newbieFriendly, string? searchText, int? eventId = null, int page = 1, int pageSize = 30);
-    Task<List<SessionListResponse>> GetUserSessionsAsync(string userId);
-    Task<List<SessionListResponse>> GetUserAttendingSessionsAsync(string userId);
+        string? location, string? gameType, bool? availableOnly, bool? newbieFriendly, bool upcomingOnly, string? searchText, int? eventId = null, int page = 1, int pageSize = 30);
+    Task<List<SessionListResponse>> GetUserSessionsAsync(string userId, bool upcomingOnly = true);
+    Task<List<SessionListResponse>> GetUserAttendingSessionsAsync(string userId, bool upcomingOnly = true);
     Task<List<SessionListResponse>> GetEventSessionsAsync(int eventId, string? userId);
     Task<bool> JoinSessionAsync(int sessionId, string userId);
     Task<bool> LeaveSessionAsync(int sessionId, string userId);
@@ -396,13 +396,17 @@ public class SessionService : ISessionService
     }
 
     public async Task<PaginatedResult<SessionListResponse>> SearchSessionsAsync(string? userId, DateTime? fromDate,
-        DateTime? toDate, string? location, string? gameType, bool? availableOnly, bool? newbieFriendly, string? searchText, int? eventId = null, int page = 1, int pageSize = 30)
+        DateTime? toDate, string? location, string? gameType, bool? availableOnly, bool? newbieFriendly, bool upcomingOnly, string? searchText, int? eventId = null, int page = 1, int pageSize = 30)
     {
         var query = _context.Sessions
             .Include(s => s.Host)
             .Include(s => s.Attendees)
             .Include(s => s.Event)
             .Where(s => !s.IsCancelled);
+
+        // Default filter: only upcoming sessions
+        if (upcomingOnly)
+            query = query.Where(s => s.StartTime >= DateTime.UtcNow);
 
         if (fromDate.HasValue)
             query = query.Where(s => s.StartTime >= fromDate.Value);
@@ -436,7 +440,7 @@ public class SessionService : ISessionService
 
         var totalCountQuery = query;
         var sessions = await query
-            .OrderBy(s => s.StartTime)
+            .OrderByDescending(s => s.StartTime) // Latest sessions first
             .ToListAsync();
 
         // Filter by blacklist and visibility
@@ -709,14 +713,20 @@ public class SessionService : ISessionService
         return false;
     }
 
-    public async Task<List<SessionListResponse>> GetUserSessionsAsync(string userId)
+    public async Task<List<SessionListResponse>> GetUserSessionsAsync(string userId, bool upcomingOnly = true)
     {
-        var sessions = await _context.Sessions
+        var query = _context.Sessions
             .Include(s => s.Host)
             .Include(s => s.Attendees)
             .Include(s => s.Event)
-            .Where(s => s.HostId == userId && !s.IsCancelled)
-            .OrderByDescending(s => s.StartTime)
+            .Where(s => s.HostId == userId && !s.IsCancelled);
+
+        // Default filter: only upcoming sessions
+        if (upcomingOnly)
+            query = query.Where(s => s.StartTime >= DateTime.UtcNow);
+
+        var sessions = await query
+            .OrderByDescending(s => s.StartTime) // Latest sessions first
             .ToListAsync();
 
         return sessions.Select(s => {
@@ -743,7 +753,7 @@ public class SessionService : ISessionService
         }).ToList();
     }
 
-    public async Task<List<SessionListResponse>> GetUserAttendingSessionsAsync(string userId)
+    public async Task<List<SessionListResponse>> GetUserAttendingSessionsAsync(string userId, bool upcomingOnly = true)
     {
         // Get sessions where user is an attendee (not the host)
         var attendingSessionIds = await _context.SessionAttendees
@@ -751,12 +761,18 @@ public class SessionService : ISessionService
             .Select(sa => sa.SessionId)
             .ToListAsync();
 
-        var sessions = await _context.Sessions
+        var query = _context.Sessions
             .Include(s => s.Host)
             .Include(s => s.Attendees)
             .Include(s => s.Event)
-            .Where(s => attendingSessionIds.Contains(s.Id) && !s.IsCancelled)
-            .OrderByDescending(s => s.StartTime)
+            .Where(s => attendingSessionIds.Contains(s.Id) && !s.IsCancelled);
+
+        // Default filter: only upcoming sessions
+        if (upcomingOnly)
+            query = query.Where(s => s.StartTime >= DateTime.UtcNow);
+
+        var sessions = await query
+            .OrderByDescending(s => s.StartTime) // Latest sessions first
             .ToListAsync();
 
         return sessions.Select(s => {
