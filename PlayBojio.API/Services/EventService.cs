@@ -300,7 +300,8 @@ public class EventService : IEventService
             e.Attendees.Count,
             e.MaxParticipants,
             e.Organizer.DisplayName,
-            e.Price
+            e.Price,
+            e.DummyAttendeesCount
         )).ToList();
 
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
@@ -334,7 +335,8 @@ public class EventService : IEventService
             e.Attendees.Count,
             e.MaxParticipants,
             e.Organizer.DisplayName,
-            e.Price
+            e.Price,
+            e.DummyAttendeesCount
         )).ToList();
     }
 
@@ -364,7 +366,8 @@ public class EventService : IEventService
             e.Attendees.Count,
             e.MaxParticipants,
             e.Organizer.DisplayName,
-            e.Price
+            e.Price,
+            e.DummyAttendeesCount
         )).ToList();
     }
 

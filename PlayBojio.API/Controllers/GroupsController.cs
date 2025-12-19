@@ -208,7 +208,8 @@ public class GroupsController : ControllerBase
                 e.Attendees.Count,
                 e.MaxParticipants,
                 e.Organizer.DisplayName,
-                e.Price
+                e.Price,
+                e.DummyAttendeesCount
             ))
             .ToListAsync();
 

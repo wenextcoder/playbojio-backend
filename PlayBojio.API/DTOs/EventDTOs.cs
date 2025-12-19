@@ -73,6 +73,7 @@ public record EventListResponse(
     int AttendeeCount,
     int? MaxParticipants,
     string OrganizerName,
-    decimal? Price
+    decimal? Price,
+    int DummyAttendeesCount
 );
 
