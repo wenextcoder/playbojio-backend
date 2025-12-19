@@ -187,8 +187,100 @@ public class AdminService : IAdminService
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) return false;
 
-        var result = await _userManager.DeleteAsync(user);
-        return result.Succeeded;
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            // 1. Delete all events created by this user (cascade will handle event attendees, sessions, etc.)
+            var userEvents = await _context.Events
+                .Where(e => e.OrganizerId == userId)
+                .ToListAsync();
+            _context.Events.RemoveRange(userEvents);
+
+            // 2. Delete all sessions created by this user (cascade will handle session attendees)
+            var userSessions = await _context.Sessions
+                .Where(s => s.HostId == userId)
+                .ToListAsync();
+            _context.Sessions.RemoveRange(userSessions);
+
+            // 3. Delete all groups owned by this user
+            var ownedGroups = await _context.Groups
+                .Where(g => g.OwnerId == userId)
+                .ToListAsync();
+            _context.Groups.RemoveRange(ownedGroups);
+
+            // 4. Remove user from all group memberships
+            var groupMemberships = await _context.GroupMembers
+                .Where(gm => gm.UserId == userId)
+                .ToListAsync();
+            _context.GroupMembers.RemoveRange(groupMemberships);
+
+            // 5. Remove all event attendance records
+            var eventAttendances = await _context.EventAttendees
+                .Where(ea => ea.UserId == userId)
+                .ToListAsync();
+            _context.EventAttendees.RemoveRange(eventAttendances);
+
+            // 6. Remove all session attendance records
+            var sessionAttendances = await _context.SessionAttendees
+                .Where(sa => sa.UserId == userId)
+                .ToListAsync();
+            _context.SessionAttendees.RemoveRange(sessionAttendances);
+
+            // 7. Delete all friend relationships (both directions)
+            var friendRelationships = await _context.Friends
+                .Where(f => f.UserId == userId || f.FriendId == userId)
+                .ToListAsync();
+            _context.Friends.RemoveRange(friendRelationships);
+
+            // 8. Delete all friend requests (both sent and received)
+            var friendRequests = await _context.FriendRequests
+                .Where(fr => fr.SenderId == userId || fr.ReceiverId == userId)
+                .ToListAsync();
+            _context.FriendRequests.RemoveRange(friendRequests);
+
+            // 9. Delete all group join requests
+            var joinRequests = await _context.GroupJoinRequests
+                .Where(jr => jr.UserId == userId)
+                .ToListAsync();
+            _context.GroupJoinRequests.RemoveRange(joinRequests);
+
+            // 10. Delete all group invitations (both sent and received)
+            var groupInvitations = await _context.GroupInvitations
+                .Where(gi => gi.InvitedUserId == userId || gi.InvitedByUserId == userId)
+                .ToListAsync();
+            _context.GroupInvitations.RemoveRange(groupInvitations);
+
+            // 11. Delete all group blacklist entries (where user is blacklisted or blacklisted by)
+            var blacklistEntries = await _context.GroupBlacklists
+                .Where(gb => gb.BlacklistedUserId == userId || gb.BlacklistedByUserId == userId)
+                .ToListAsync();
+            _context.GroupBlacklists.RemoveRange(blacklistEntries);
+
+            // 12. Delete all event blacklist entries (where user is blacklisted or blacklisted by)
+            var eventBlacklistEntries = await _context.EventBlacklists
+                .Where(eb => eb.BlacklistedUserId == userId || eb.BlacklistedByUserId == userId)
+                .ToListAsync();
+            _context.EventBlacklists.RemoveRange(eventBlacklistEntries);
+
+            // Save all deletions
+            await _context.SaveChangesAsync();
+
+            // 13. Finally, delete the user account
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            await transaction.CommitAsync();
+            return true;
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            return false;
+        }
     }
 
     public async Task<List<object>> GetEventsAsync(int pageSize)
