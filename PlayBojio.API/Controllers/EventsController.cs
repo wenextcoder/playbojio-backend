@@ -38,24 +38,24 @@ public class EventsController : ControllerBase
     }
 
     [HttpGet("my-events")]
-    public async Task<IActionResult> GetMyEvents()
+    public async Task<IActionResult> GetMyEvents([FromQuery] bool? upcomingOnly)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
             return Unauthorized();
 
-        var result = await _eventService.GetUserEventsAsync(userId);
+        var result = await _eventService.GetUserEventsAsync(userId, upcomingOnly ?? true);
         return Ok(result);
     }
 
     [HttpGet("attending")]
-    public async Task<IActionResult> GetAttendingEvents()
+    public async Task<IActionResult> GetAttendingEvents([FromQuery] bool? upcomingOnly)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
             return Unauthorized();
 
-        var result = await _eventService.GetUserAttendingEventsAsync(userId);
+        var result = await _eventService.GetUserAttendingEventsAsync(userId, upcomingOnly ?? true);
         return Ok(result);
     }
 
@@ -122,11 +122,12 @@ public class EventsController : ControllerBase
         [FromQuery] DateTime? toDate,
         [FromQuery] string? location,
         [FromQuery] string? searchText,
+        [FromQuery] bool? upcomingOnly,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 30)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var result = await _eventService.SearchEventsAsync(userId, fromDate, toDate, location, searchText, page, pageSize);
+        var result = await _eventService.SearchEventsAsync(userId, fromDate, toDate, location, searchText, upcomingOnly ?? true, page, pageSize);
 
         return Ok(result);
     }

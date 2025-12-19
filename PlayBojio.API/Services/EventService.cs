@@ -13,9 +13,9 @@ public interface IEventService
     Task<bool> CancelEventAsync(int eventId, string userId);
     Task<EventResponse?> GetEventAsync(int eventId, string? userId);
     Task<EventResponse?> GetEventBySlugAsync(string slug, string? userId);
-    Task<PaginatedResult<EventListResponse>> SearchEventsAsync(string? userId, DateTime? fromDate, DateTime? toDate, string? location, string? searchText, int page = 1, int pageSize = 30);
-    Task<List<EventListResponse>> GetUserEventsAsync(string userId);
-    Task<List<EventListResponse>> GetUserAttendingEventsAsync(string userId);
+    Task<PaginatedResult<EventListResponse>> SearchEventsAsync(string? userId, DateTime? fromDate, DateTime? toDate, string? location, string? searchText, bool upcomingOnly = true, int page = 1, int pageSize = 30);
+    Task<List<EventListResponse>> GetUserEventsAsync(string userId, bool upcomingOnly = true);
+    Task<List<EventListResponse>> GetUserAttendingEventsAsync(string userId, bool upcomingOnly = true);
     Task<bool> JoinEventAsync(int eventId, string userId);
     Task<bool> LeaveEventAsync(int eventId, string userId);
 }
@@ -249,12 +249,16 @@ public class EventService : IEventService
     }
 
     public async Task<PaginatedResult<EventListResponse>> SearchEventsAsync(string? userId, DateTime? fromDate, 
-        DateTime? toDate, string? location, string? searchText, int page = 1, int pageSize = 30)
+        DateTime? toDate, string? location, string? searchText, bool upcomingOnly = true, int page = 1, int pageSize = 30)
     {
         var query = _context.Events
             .Include(e => e.Organizer)
             .Include(e => e.Attendees)
             .Where(e => !e.IsCancelled);
+
+        // Default filter: only upcoming events
+        if (upcomingOnly)
+            query = query.Where(e => e.StartDate >= DateTime.UtcNow);
 
         if (fromDate.HasValue)
             query = query.Where(e => e.StartDate >= fromDate.Value);
@@ -277,7 +281,7 @@ public class EventService : IEventService
         var totalCount = await query.CountAsync();
         
         var events = await query
-            .OrderBy(e => e.StartDate)
+            .OrderByDescending(e => e.StartDate) // Latest events first
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -315,13 +319,19 @@ public class EventService : IEventService
         );
     }
 
-    public async Task<List<EventListResponse>> GetUserEventsAsync(string userId)
+    public async Task<List<EventListResponse>> GetUserEventsAsync(string userId, bool upcomingOnly = true)
     {
-        var events = await _context.Events
+        var query = _context.Events
             .Include(e => e.Organizer)
             .Include(e => e.Attendees)
-            .Where(e => e.OrganizerId == userId && !e.IsCancelled)
-            .OrderByDescending(e => e.StartDate)
+            .Where(e => e.OrganizerId == userId && !e.IsCancelled);
+
+        // Default filter: only upcoming events
+        if (upcomingOnly)
+            query = query.Where(e => e.StartDate >= DateTime.UtcNow);
+
+        var events = await query
+            .OrderByDescending(e => e.StartDate) // Latest events first
             .ToListAsync();
 
         return events.Select(e => new EventListResponse(
@@ -340,7 +350,7 @@ public class EventService : IEventService
         )).ToList();
     }
 
-    public async Task<List<EventListResponse>> GetUserAttendingEventsAsync(string userId)
+    public async Task<List<EventListResponse>> GetUserAttendingEventsAsync(string userId, bool upcomingOnly = true)
     {
         // Get events where user is an attendee (not the organizer)
         var attendingEventIds = await _context.EventAttendees
@@ -348,11 +358,17 @@ public class EventService : IEventService
             .Select(ea => ea.EventId)
             .ToListAsync();
 
-        var events = await _context.Events
+        var query = _context.Events
             .Include(e => e.Organizer)
             .Include(e => e.Attendees)
-            .Where(e => attendingEventIds.Contains(e.Id) && !e.IsCancelled)
-            .OrderByDescending(e => e.StartDate)
+            .Where(e => attendingEventIds.Contains(e.Id) && !e.IsCancelled);
+
+        // Default filter: only upcoming events
+        if (upcomingOnly)
+            query = query.Where(e => e.StartDate >= DateTime.UtcNow);
+
+        var events = await query
+            .OrderByDescending(e => e.StartDate) // Latest events first
             .ToListAsync();
 
         return events.Select(e => new EventListResponse(
