@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PlayBojio.API.DTOs;
 using PlayBojio.API.Models;
 using PlayBojio.API.Services;
@@ -33,6 +34,31 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Registration failed", errors = result.Errors });
 
         return Ok(result.Data);
+    }
+
+    [HttpPost("check-email")]
+    public async Task<IActionResult> CheckEmail([FromBody] CheckEmailRequest request)
+    {
+        // Extract username from email
+        var username = request.Email.Split('@')[0].ToLower();
+        
+        // Find all accounts with the same username but different domains
+        var allUsers = await _userManager.Users.ToListAsync();
+        var similarAccounts = allUsers
+            .Where(u => u.Email != null && 
+                   u.Email.Split('@')[0].ToLower() == username &&
+                   u.Email.ToLower() != request.Email.ToLower())
+            .Select(u => new {
+                email = u.Email,
+                displayName = u.DisplayName,
+                createdAt = u.CreatedAt
+            })
+            .ToList();
+
+        return Ok(new {
+            exists = await _userManager.FindByEmailAsync(request.Email) != null,
+            similarAccounts = similarAccounts
+        });
     }
 
     [HttpPost("login")]

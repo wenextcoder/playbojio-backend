@@ -61,3 +61,7 @@ public record GoogleLoginRequest(
     string IdToken
 );
 
+public record CheckEmailRequest(
+    string Email
+);
+
