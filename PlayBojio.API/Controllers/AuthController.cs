@@ -184,8 +184,12 @@ public class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
             return BadRequest(new { message = "Search query must be at least 2 characters" });
 
+        // Convert query to lowercase for case-insensitive search
+        var lowerQuery = query.ToLower();
+        
         var users = _userManager.Users
-            .Where(u => u.DisplayName.Contains(query) || u.Email.Contains(query))
+            .Where(u => u.DisplayName.ToLower().Contains(lowerQuery) || 
+                       u.Email.ToLower().Contains(lowerQuery))
             .Take(20)
             .Select(u => new
             {
