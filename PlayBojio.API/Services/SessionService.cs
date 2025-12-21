@@ -488,7 +488,7 @@ public class SessionService : ISessionService
                 if (s.Visibility == SessionVisibility.InviteOnly)
                     return invites.Contains(s.Id);
 
-                // Group-limited sessions
+                // Group-limited sessions - must be in group
                 if (s.Visibility == SessionVisibility.GroupLimited)
                 {
                     var sessionGroupIds = sessionGroups
@@ -504,6 +504,11 @@ public class SessionService : ISessionService
 
                 return false;
             }).ToList();
+        }
+        else
+        {
+            // Unauthenticated users can only see public sessions
+            sessions = sessions.Where(s => s.Visibility == SessionVisibility.Public).ToList();
         }
 
         if (availableOnly == true)

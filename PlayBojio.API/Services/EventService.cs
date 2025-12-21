@@ -281,7 +281,7 @@ public class EventService : IEventService
         var totalCount = await query.CountAsync();
         
         var events = await query
-            .OrderByDescending(e => e.StartDate) // Latest events first
+            .OrderBy(e => e.StartDate) // Earliest upcoming events first
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -291,6 +291,11 @@ public class EventService : IEventService
             events = await Task.WhenAll(events.Select(async e => 
                 await CanUserViewEvent(e, userId) ? e : null!))
                 .ContinueWith(t => t.Result.Where(e => e != null).ToList());
+        }
+        else
+        {
+            // Unauthenticated users can only see public events
+            events = events.Where(e => e.Visibility == EventVisibility.Public).ToList();
         }
 
         var items = events.Select(e => new EventListResponse(
