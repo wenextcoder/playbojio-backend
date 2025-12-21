@@ -245,14 +245,15 @@ public class SessionService : ISessionService
         if (userId != null && !await CanUserViewSession(session, userId))
             return null;
 
-        var currentPlayers = session.Attendees.Count;
+        // Include dummy/placeholder attendees in current players count
+        var currentPlayers = session.Attendees.Count + session.DummyAttendeesCount;
         var waitlistCount = session.Waitlist.Count;
         var isUserAttending = userId != null && session.Attendees.Any(a => a.UserId == userId);
         var isUserOnWaitlist = userId != null && session.Waitlist.Any(w => w.UserId == userId);
         var isUserHost = userId == session.HostId;
         var hostCount = session.IsHostParticipating ? 1 : 0;
-        // Include dummy attendees in slot calculation
-        var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount + session.DummyAttendeesCount);
+        // Calculate available slots
+        var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount);
         
         // Check if user is a member of the event (for event sessions)
         var isUserEventMember = false;
@@ -328,14 +329,15 @@ public class SessionService : ISessionService
         if (userId != null && !await CanUserViewSession(session, userId))
             return null;
 
-        var currentPlayers = session.Attendees.Count;
+        // Include dummy/placeholder attendees in current players count
+        var currentPlayers = session.Attendees.Count + session.DummyAttendeesCount;
         var waitlistCount = session.Waitlist.Count;
         var isUserAttending = userId != null && session.Attendees.Any(a => a.UserId == userId);
         var isUserOnWaitlist = userId != null && session.Waitlist.Any(w => w.UserId == userId);
         var isUserHost = userId == session.HostId;
         var hostCount = session.IsHostParticipating ? 1 : 0;
-        // Include dummy attendees in slot calculation
-        var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount + session.DummyAttendeesCount);
+        // Calculate available slots
+        var availableSlots = session.MaxPlayers - (currentPlayers + session.ReservedSlots + hostCount);
         
         // Check if user is a member of the event (for event sessions)
         var isUserEventMember = false;
@@ -440,7 +442,7 @@ public class SessionService : ISessionService
 
         var totalCountQuery = query;
         var sessions = await query
-            .OrderByDescending(s => s.StartTime) // Latest sessions first
+            .OrderBy(s => s.StartTime) // Earliest upcoming sessions first
             .ToListAsync();
 
         // Filter by blacklist and visibility
@@ -726,7 +728,7 @@ public class SessionService : ISessionService
             query = query.Where(s => s.StartTime >= DateTime.UtcNow);
 
         var sessions = await query
-            .OrderByDescending(s => s.StartTime) // Latest sessions first
+            .OrderBy(s => s.StartTime) // Earliest upcoming sessions first
             .ToListAsync();
 
         return sessions.Select(s => {
@@ -772,7 +774,7 @@ public class SessionService : ISessionService
             query = query.Where(s => s.StartTime >= DateTime.UtcNow);
 
         var sessions = await query
-            .OrderByDescending(s => s.StartTime) // Latest sessions first
+            .OrderBy(s => s.StartTime) // Earliest upcoming sessions first
             .ToListAsync();
 
         return sessions.Select(s => {
