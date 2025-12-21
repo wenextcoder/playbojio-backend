@@ -105,13 +105,26 @@ public class FriendService : IFriendService
             return false;
 
         // Check if pending request already exists
-        var existingRequest = await _context.FriendRequests
+        var existingPendingRequest = await _context.FriendRequests
             .AnyAsync(fr => ((fr.SenderId == senderId && fr.ReceiverId == receiverId) ||
                            (fr.SenderId == receiverId && fr.ReceiverId == senderId)) &&
                            fr.Status == FriendRequestStatus.Pending);
 
-        if (existingRequest)
+        if (existingPendingRequest)
             return false;
+
+        // Clean up old rejected/cancelled requests between these users
+        var oldRequests = await _context.FriendRequests
+            .Where(fr => ((fr.SenderId == senderId && fr.ReceiverId == receiverId) ||
+                         (fr.SenderId == receiverId && fr.ReceiverId == senderId)) &&
+                         fr.Status != FriendRequestStatus.Pending)
+            .ToListAsync();
+
+        if (oldRequests.Any())
+        {
+            _context.FriendRequests.RemoveRange(oldRequests);
+            await _context.SaveChangesAsync();
+        }
 
         var friendRequest = new FriendRequest
         {
