@@ -104,10 +104,11 @@ public class FriendService : IFriendService
         if (existingFriendship)
             return false;
 
-        // Check if request already exists
+        // Check if pending request already exists
         var existingRequest = await _context.FriendRequests
-            .AnyAsync(fr => (fr.SenderId == senderId && fr.ReceiverId == receiverId) ||
-                           (fr.SenderId == receiverId && fr.ReceiverId == senderId));
+            .AnyAsync(fr => ((fr.SenderId == senderId && fr.ReceiverId == receiverId) ||
+                           (fr.SenderId == receiverId && fr.ReceiverId == senderId)) &&
+                           fr.Status == FriendRequestStatus.Pending);
 
         if (existingRequest)
             return false;
