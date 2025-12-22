@@ -172,7 +172,7 @@ public class EventService : IEventService
         if (userId != null && !await CanUserViewEvent(evt, userId))
             return null;
 
-        var attendeeCount = evt.Attendees.Count;
+        var attendeeCount = evt.Attendees.Count + evt.DummyAttendeesCount;
         var isUserAttending = userId != null && evt.Attendees.Any(a => a.UserId == userId);
         var isUserOrganizer = userId == evt.OrganizerId;
 
@@ -217,7 +217,7 @@ public class EventService : IEventService
         if (userId != null && !await CanUserViewEvent(evt, userId))
             return null;
 
-        var attendeeCount = evt.Attendees.Count;
+        var attendeeCount = evt.Attendees.Count + evt.DummyAttendeesCount;
         var isUserAttending = userId != null && evt.Attendees.Any(a => a.UserId == userId);
         var isUserOrganizer = userId == evt.OrganizerId;
 
