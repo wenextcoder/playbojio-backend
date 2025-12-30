@@ -273,21 +273,19 @@ public class EventsController : ControllerBase
         return NoContent();
     }
 
-    // Get attendees list for event organizer
+    // Get attendees list (public - anyone can view)
     [HttpGet("{id}/attendees")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetEventAttendees(int id)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null)
-            return Unauthorized();
 
         var eventItem = await _context.Events.FindAsync(id);
         if (eventItem == null)
             return NotFound();
 
-        // Check if user is event organizer
-        if (eventItem.OrganizerId != userId)
-            return Forbid();
+        // Check if user is the organizer (to show email)
+        var isOrganizer = userId != null && eventItem.OrganizerId == userId;
 
         var attendees = await _context.EventAttendees
             .Where(ea => ea.EventId == id)
@@ -297,7 +295,7 @@ public class EventsController : ControllerBase
                 ea.User.Id,
                 ea.User.DisplayName,
                 ea.User.AvatarUrl,
-                ea.User.Email,
+                Email = isOrganizer ? ea.User.Email : null, // Only show email to organizer
                 ea.JoinedAt
             })
             .ToListAsync();
